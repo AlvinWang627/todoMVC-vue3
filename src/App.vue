@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watchEffect } from 'vue';
 
-const todos = ref([]);
+// const todos = ref([]);
+const STORAGE_KEY = 'todomvc-app-vue';
+const todos = ref(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
 const visibility = ref('all');
-const STORAGE_KEY = 'todomvc-app-vue'
 const filters = {
   all: (todos) => todos,
   active: (todos) => todos.filter((todo) => !todo.completed),
@@ -19,6 +20,9 @@ const filteredTodos = computed(() => {
 });
 const remaining = computed(() => {
   return filters.active(todos.value).length;
+});
+watchEffect(() => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos.value));
 });
 
 function addTodo(e) {
