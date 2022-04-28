@@ -1,18 +1,35 @@
 <script setup>
 import { ref, computed, watchEffect } from 'vue';
 
-// const todos = ref([]);
 const STORAGE_KEY = 'todomvc-app-vue';
-const todos = ref(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
-const visibility = ref('all');
 const filters = {
   all: (todos) => todos,
   active: (todos) => todos.filter((todo) => !todo.completed),
   completed: (todos) => todos.filter((todo) => todo.completed),
 };
+const todos = ref(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+const visibility = ref('all');
+const currentEditTodo = ref();
+
+let beforeEditCache = '';
+function editTodo(todo) {
+  beforeEditCache = todo.title;
+  currentEditTodo.value = todo;
+}
+
+function cancelEdit(todo) {
+  currentEditTodo.value = null;
+  todo.title = beforeEditCache;
+}
+function doneEdit(todo) {
+  if (currentEditTodo.value) {
+    currentEditTodo.value = null;
+    todo.title = todo.title.trim();
+    if (!todo.title) removeTodo(todo);
+  }
+}
 
 function setVisibility(vs) {
-  console.log(todos.value);
   visibility.value = vs;
 }
 const filteredTodos = computed(() => {
@@ -21,6 +38,7 @@ const filteredTodos = computed(() => {
 const remaining = computed(() => {
   return filters.active(todos.value).length;
 });
+
 watchEffect(() => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(todos.value));
 });
@@ -37,8 +55,8 @@ function addTodo(e) {
   }
 }
 function removeTodo(todo) {
-  // todos.value.splice(todos.value.indexOf(todo), 1)
-  todos.value = todos.value.filter((_todo) => _todo.id !== todo.id);
+  todos.value.splice(todos.value.indexOf(todo), 1);
+  // todos.value = todos.value.filter((_todo) => _todo.id !== todo.id);
 }
 
 function removeCompleted() {
@@ -66,14 +84,24 @@ function removeCompleted() {
           v-for="todo in filteredTodos"
           :key="todo.id"
           class="todo"
-          :class="{ completed: todo.completed }"
+          :class="{
+            completed: todo.completed,
+            editing: todo === currentEditTodo,
+          }"
         >
           <div class="view">
             <input v-model="todo.completed" type="checkbox" class="toggle" />
-            <label for="">{{ todo.title }}</label>
+            <label for="" @dblclick="editTodo(todo)">{{ todo.title }}</label>
             <button @click="removeTodo(todo)" class="destroy"></button>
           </div>
-          <input type="text" class="edit" />
+          <input
+            type="text"
+            class="edit"
+            v-model="todo.title"
+            @keyup.esc="cancelEdit(todo)"
+            @keyup.enter="doneEdit(todo)"
+            @blur="doneEdit(todo)"
+          />
         </li>
       </ul>
     </main>
